@@ -100,12 +100,12 @@ if __name__ == '__main__':
     print("===========================================")
     print("Combine ECG files")
     ecg_combined_df = ECG_read_and_combine(valid_folders)
-    print("Saveing csv", end="...")
+    print("Saving csv", end="...")
     # save csv
     ecg_combined_df.to_csv('{}/ECG.csv'.format(args.out_folder), index=False)
     print("OK")
     # save pkl
-    print("Saveing pkl", end="...")
+    print("Saving pkl", end="...")
     ecg_combined_df.to_pickle('{}/ECG.pkl'.format(args.out_folder))
     print("OK")
 
@@ -113,21 +113,21 @@ if __name__ == '__main__':
     print("Combine summary files")
     summary_combined_df = summary_read_and_combine(valid_folders)
     # save csv
-    print("Saveing csv", end="...")
+    print("Saving csv", end="...")
     summary_combined_df.to_csv('{}/summary.csv'.format(args.out_folder), index=False)
     print("OK")
     # save pkl
-    print("Saveing pkl", end="...")
+    print("Saving pkl", end="...")
     summary_combined_df.to_pickle('{}/summary.pkl'.format(args.out_folder))
     print("OK")
     print("===========================================")
     print("Processing glucose file")
     glucose_df = process_glucose(args.glucose_path)
-    print("Saveing csv", end="...")
+    print("Saving csv", end="...")
     glucose_df.to_csv('{}/glucose.csv'.format(args.out_folder), index=False)
     print("OK")
     # save pkl
-    print("Saveing pkl", end="...")
+    print("Saving pkl", end="...")
     glucose_df.to_pickle('{}/glucose.pkl'.format(args.out_folder))
     print("OK")
     print("===========================================")
