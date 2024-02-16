@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 
-ppg = nk.ppg_simulate(duration=6, sampling_rate=64)
+ppg = nk.ppg_simulate(duration=60, sampling_rate=64)
 print('ppg shape:', ppg.shape)
 print('-'*50)
 print('ppg first 5:', ppg[:5])
@@ -34,6 +34,7 @@ nk.ppg_plot(signals, info)
 plt.savefig("myfig.png")
 
 
+#note, what neurokit does it that they get the hear rate and determint he window size directly from that. Of the window size, before the r-peak is .35 of the window, and after the r-peak is .65 of the window.
 
 # signals, waves = nk.ecg_delineate(ecg, rpeaks, sampling_rate=1000)
 # print(signals)
