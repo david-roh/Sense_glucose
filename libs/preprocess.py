@@ -4,16 +4,7 @@ import tqdm
 import argparse
 import pandas as pd
 from datetime import datetime
-
-# Attempt to convert it to a datetime object
-def is_valid_timestamp(timestamp_string):
-    try:
-        # Define the format based on the given string
-        format_string = "%Y_%m_%d-%H_%M_%S"
-        converted_time = datetime.strptime(timestamp_string, format_string)
-        return True, converted_time
-    except ValueError:
-        return False, None
+import flirt.reader.empatica
 
 def verify_folder(folder_path):
     # Check if folder exists
@@ -21,47 +12,62 @@ def verify_folder(folder_path):
         return False
 
     folder_name = os.path.basename(folder_path)
-    # Check if folder name is a valid timestamp
-    if not is_valid_timestamp(folder_name)[0]:
-        return False
     
-    # Check if folder contains ECG and summary files
-    file_path = glob.glob(os.path.join(folder_path, '*_ECG.csv'))
-    if len(file_path) != 1:
-        print("Skipping folder: {} (Doesn't have _ECG.csv)".format(folder_name))
-        return False
-    
-    file_path = glob.glob(os.path.join(folder_path, '*_SummaryEnhanced.csv'))
-    if len(file_path) != 1:
-        print("Skipping folder: {} (Doesn't have _SummaryEnhanced.csv)".format(folder_name))
-        return False
+    # Check if folder contains ACC, BVP, EDA, HR, IBI, TEMP files
+    file_types = ['ACC', 'BVP', 'EDA', 'HR', 'IBI', 'TEMP']
+    for file_type in file_types:
+        file_path = glob.glob(os.path.join(folder_path, '{}.csv'.format(file_type)))
+        if len(file_path) != 1:
+            print("Skipping folder: {} (Doesn't have {}.csv)".format(folder_name, file_type))
+            return False
 
     return True
 
-# combine ECG files
-def ECG_read_and_combine(valid_folders):
-    ecg_combined_df = pd.DataFrame()
+def load_and_merge_data(data_folder):
+    acc_data = flirt.reader.empatica.read_acc_file_into_df(data_folder + '/ACC.csv')
+    bvp_data = flirt.reader.empatica.read_bvp_file_into_df(data_folder + '/BVP.csv')
+    eda_data = flirt.reader.empatica.read_eda_file_into_df(data_folder + '/EDA.csv')
+    hr_data = flirt.reader.empatica.read_hr_file_into_df(data_folder + '/HR.csv')
+    ib_data = flirt.reader.empatica.read_ibi_file_into_df(data_folder + '/IBI.csv')
+    temp_data = flirt.reader.empatica.read_temp_file_into_df(data_folder + '/TEMP.csv')
+
+    data = pd.concat([bvp_data, acc_data, eda_data, hr_data, ib_data, temp_data], axis=1)
+
+    for col in ['acc_x', 'acc_y', 'acc_z', 'eda', 'hr', 'temp']:
+        data[col] = data[col].ffill()
+
+    data = data.astype({
+        'bvp': 'float32',
+        'acc_x': 'int8',
+        'acc_y': 'int8',
+        'acc_z': 'int8',
+        'eda': 'float32',
+        'hr': 'float32',
+        'ibi': 'float32',
+        'temp': 'float32'
+    })
+
+    # data['IBI_Presence'] = data['ibi'] > 0
+
+    # for i in data.index[data['IBI_Presence']]:
+    #     current_datetime = i
+    #     ibi_datetime = current_datetime - pd.Timedelta(milliseconds=data.loc[i, 'ibi'])
+    #     closest_datetime = data.index[data.index.get_indexer([ibi_datetime], method='nearest')[0]]
+    #     data.at[closest_datetime, 'IBI_Presence'] = True
+    return data
+
+def combine_all_data(valid_folders):
+    combined_df = pd.DataFrame()
+
     for folder_path in tqdm.tqdm(valid_folders):
-        file_path = glob.glob(os.path.join(folder_path, '*_ECG.csv'))[0]
-        df = pd.read_csv(file_path)        
-        ecg_combined_df = pd.concat([ecg_combined_df, df])
+        df = load_and_merge_data(folder_path)
+        combined_df = pd.concat([combined_df, df])
 
-    return ecg_combined_df
-
-# combine summary files
-def summary_read_and_combine(valid_folders):
-    summary_combined_df = pd.DataFrame()
-
-    for folder_path in tqdm.tqdm(valid_folders):
-        file_path = glob.glob(os.path.join(folder_path, '*_SummaryEnhanced.csv'))[0]
-        df = pd.read_csv(file_path)
-        summary_combined_df = pd.concat([summary_combined_df, df])
-    
-    return summary_combined_df
+    return combined_df
 
 def process_glucose(glucose_path):
     glucose_df = pd.read_csv(glucose_path,delimiter=',')
-    glucose_df = glucose_df[glucose_df['Event Type'] == 'EGV'].reset_index(drop = True) 
+    glucose_df = glucose_df[glucose_df['Event Type'] == 'EGV'].reset_index(drop = True)
     glucose_df['Glucose Value (mg/dL)'] = glucose_df['Glucose Value (mg/dL)'].str.replace('Low','40')
     glucose_df['Glucose Value (mg/dL)'] = glucose_df['Glucose Value (mg/dL)'].str.replace('High','400')
 
@@ -78,8 +84,8 @@ def process_glucose(glucose_path):
     return glucose_df
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Combine ECG and summary files')
-    parser.add_argument('--folder_path', type=str, help='path to folder containing ECG and summary files')
+    parser = argparse.ArgumentParser(description='Combine e4 files')
+    parser.add_argument('--folder_path', type=str, help='path to folder containing e4 files')
     parser.add_argument('--glucose_path', type=str, help='path to glucose file')
     parser.add_argument('--out_folder', default=None, type=str, help='path to folder to store combined files')
     args = parser.parse_args()
@@ -98,27 +104,15 @@ if __name__ == '__main__':
     print("Found {} valid folders".format(len(valid_folders)))
 
     print("===========================================")
-    print("Combine ECG files")
-    ecg_combined_df = ECG_read_and_combine(valid_folders)
-    print("Saving csv", end="...")
+    print("Combining e4 files")
+    combined_df = combine_all_data(valid_folders)
     # save csv
-    ecg_combined_df.to_csv('{}/ECG.csv'.format(args.out_folder), index=False)
+    print("Saving csv", end="...")
+    combined_df.to_csv('{}/combined_e4.csv'.format(args.out_folder), index=False)
     print("OK")
     # save pkl
     print("Saving pkl", end="...")
-    ecg_combined_df.to_pickle('{}/ECG.pkl'.format(args.out_folder))
-    print("OK")
-
-    print("===========================================")
-    print("Combine summary files")
-    summary_combined_df = summary_read_and_combine(valid_folders)
-    # save csv
-    print("Saving csv", end="...")
-    summary_combined_df.to_csv('{}/summary.csv'.format(args.out_folder), index=False)
-    print("OK")
-    # save pkl
-    print("Saving pkl", end="...")
-    summary_combined_df.to_pickle('{}/summary.pkl'.format(args.out_folder))
+    combined_df.to_pickle('{}/combined_e4.pkl'.format(args.out_folder))
     print("OK")
     print("===========================================")
     print("Processing glucose file")
