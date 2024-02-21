@@ -8,12 +8,12 @@ This project is a comprehensive suite for extracting PPG (Photoplethysmography) 
 ## Get Started
 ### Installation
 1. Clone the repository
-```
+```bash
 git clone https://github.com/david-roh/Sense_glucose.git
 cd Sense_glucose
 ```
 2. Install dependent packages
-```
+```bash
 conda create --name ppg python=3.11
 conda activate ppg
 pip install -r requirements.txt
@@ -47,7 +47,14 @@ After downloading all the data and placed in the file structure mentioned above,
 
 This reads all \*.csv files in the folder and combines them in one single pickle file respectively (combined.pkl). It also converts the raw glucose metadata file into the desired glucose file format (glucose.pkl).
 
-```
+### Data Types in Combined Data
+The combined data is stored in a DataFrame with the following data types:
+
+- `bvp`, `hr`, `ibi`, `temp`: These columns are stored as `float16` to save memory while providing sufficient precision for the data they represent.
+- `acc_x`, `acc_y`, `acc_z`: These columns represent accelerometer data and are stored as `Int8` to save memory.
+- `eda`: This column is stored as `float32` to provide sufficient precision for the EDA data.
+
+```bash
 python libs/preprocess.py --folder_path <folder_path> --glucose_path <glucose_path>
 ```
 - **folder_path**: The folder path containing all the downloaded E4 files for each subject. 
@@ -56,10 +63,28 @@ python libs/preprocess.py --folder_path <folder_path> --glucose_path <glucose_pa
     - Ex: "./SeNSE TAMU/TCH: Cohort 1 Data/S01/cgm/Clarity_Export_C01S01_2022-07-05.csv"
 - out_folder: Optional. If not provided, it is the same as the folder_path. This is where the preprocessed **combined.pkl**, and **glucose.pkl** are saved.
 
+Preview of the combined.csv file:
+| datetime                   | bvp  | acc_x | acc_y | acc_z | eda | hr | ibi | temp  |
+|----------------------------|:----:|:-----:|:-----:|:-----:|:---:|:--:|:---:|:-----:|
+| 2022-06-26 15:57:31.000000 | -0.0 | 38    | 34    | 23    | 0.0 |    |     | 34.66 |
+| 2022-06-26 15:57:31.015625 | -0.0 |       |       |       |     |    |     |       |
+| 2022-06-26 15:57:31.031250 | -0.0 | 36    | 38    | 30    |     |    |     |       |
+| 2022-06-26 15:57:31.046875 | -0.0 |       |       |       |     |    |     |       |
+
+Preview of the glucose.csv file:
+| Timestamp               | glucose |
+|-------------------------|:-------:|
+| 2022-04-02 00:03:05     | 111.0   |
+| 2022-04-02 00:09:39     | 105.0   |
+| 2022-04-02 00:14:38     | 97.0    |
+| 2022-04-02 00:19:39     | 90.0    |
+
+
+
 ## Process the raw data into PPG beats 
 After the preprocessing step is complete, we can begin processing the data by running the command:
 
-```
+```bash
 python main.py --input_folder <input_folder> --out_folder <out_folder>
 ```
 - **input_folder**: The folder where the combined.pkl, and glucose.pkl are saved, i.e. the out_folder path in the preprocessing step.

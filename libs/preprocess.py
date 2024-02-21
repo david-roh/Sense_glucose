@@ -30,21 +30,25 @@ def load_and_merge_data(data_folder):
     hr_data = flirt.reader.empatica.read_hr_file_into_df(data_folder + '/HR.csv')
     ib_data = flirt.reader.empatica.read_ibi_file_into_df(data_folder + '/IBI.csv')
     temp_data = flirt.reader.empatica.read_temp_file_into_df(data_folder + '/TEMP.csv')
+    
 
+    # Combine the sliced DataFrames
     data = pd.concat([bvp_data, acc_data, eda_data, hr_data, ib_data, temp_data], axis=1)
-
-    for col in ['acc_x', 'acc_y', 'acc_z', 'eda', 'hr', 'temp']:
-        data[col] = data[col].ffill()
+    
+    # opted to not to forward fill acceleration data
+    # forward fill the data for HR, EDA, TEMP as they have lower frequencies (1Hz, 4Hz, 4Hz respectively) than BVP/IBI (64Hz)
+    # for col in ['eda', 'hr', 'temp']:
+    #     data[col] = data[col].ffill()
 
     data = data.astype({
-        'bvp': 'float32',
-        'acc_x': 'int8',
-        'acc_y': 'int8',
-        'acc_z': 'int8',
+        'bvp': 'float16',
+        'acc_x': 'Int8',
+        'acc_y': 'Int8',
+        'acc_z': 'Int8',
         'eda': 'float32',
-        'hr': 'float32',
-        'ibi': 'float32',
-        'temp': 'float32'
+        'hr': 'float16',
+        'ibi': 'float16',
+        'temp': 'float16'
     })
 
     # data['IBI_Presence'] = data['ibi'] > 0
@@ -63,10 +67,14 @@ def combine_all_data(valid_folders):
         df = load_and_merge_data(folder_path)
         combined_df = pd.concat([combined_df, df])
 
+    # Convert the datetime index to a timezone-naive datetime (remove timezone)
+    combined_df.index = combined_df.index.tz_localize(None)
+    
     return combined_df
 
 def process_glucose(glucose_path):
-    glucose_df = pd.read_csv(glucose_path,delimiter=',')
+    glucose_df = pd.read_csv(glucose_path, delimiter='\t')
+    
     glucose_df = glucose_df[glucose_df['Event Type'] == 'EGV'].reset_index(drop = True)
     glucose_df['Glucose Value (mg/dL)'] = glucose_df['Glucose Value (mg/dL)'].str.replace('Low','40')
     glucose_df['Glucose Value (mg/dL)'] = glucose_df['Glucose Value (mg/dL)'].str.replace('High','400')
@@ -78,7 +86,7 @@ def process_glucose(glucose_path):
         glucose_df['Timestamp'] = pd.to_datetime(glucose_df['Timestamp'],format = '%Y-%m-%dT%H:%M:%S')
     except:
         glucose_df['Timestamp'] = pd.to_datetime(glucose_df['Timestamp'],format = '%Y-%m-%d %H:%M:%S')
-    glucose_df['glucose'] = glucose_df['glucose'].astype(float)
+    glucose_df['glucose'] = glucose_df['glucose'].astype('int16')
     glucose_df = glucose_df.sort_values('Timestamp').reset_index(drop = True)
 
     return glucose_df
@@ -108,7 +116,7 @@ if __name__ == '__main__':
     combined_df = combine_all_data(valid_folders)
     # save csv
     print("Saving csv", end="...")
-    combined_df.to_csv('{}/combined_e4.csv'.format(args.out_folder), index=False)
+    combined_df.to_csv('{}/combined_e4.csv'.format(args.out_folder), index=True)
     print("OK")
     # save pkl
     print("Saving pkl", end="...")
