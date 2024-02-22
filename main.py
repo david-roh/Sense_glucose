@@ -7,17 +7,32 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import neurokit2 as nk
 from libs.helper import load_checkfile, generate_beats, plot_beat, combine_with_summary_glucose, clean_negative_values
-from scipy.interpolate import interp1d
-from skimage.util.shape import view_as_windows as viewW
+# from scipy.interpolate import interp1d
+# from skimage.util.shape import view_as_windows as viewW
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--input_folder', type=str, help='path to folder containing ECG, summary, and glucose files')
-    parser.add_argument('--out_folder', default="/mnt/data2/mtseng/dataset/SeNSE/TCH_processed", type=str, help='path to the output preprocessed folder')
+    parser.add_argument('--input_folder', type=str, help='path to folder containing combined e4, and glucose files')
+    parser.add_argument('--out_folder', default="/mnt/data2/david/data/TCH_processed", type=str, help='path to the output preprocessed folder')
     args = parser.parse_args()
 
-    cohort_id = int(args.input_folder.split('/')[-2].replace('cohort', ''))
-    subject_id = int(args.input_folder.split('/')[-1].replace('s', ''))
+    # cohort_id = int(args.input_folder.split('/')[-2].replace('c', ''))
+    # subject_id = int(args.input_folder.split('/')[-1].replace('s', ''))
+    # ^modified to work with any folder structure, not just last two parts
+    cohort_id = None
+    subject_id = None
+
+    parts = args.input_folder.split('/')
+    print(parts)
+
+    for part in parts:
+        if part.startswith('c_'):
+            cohort_id = int(part.replace('c_', ''))
+        elif part.startswith('s_'):
+            subject_id = int(part.replace('s_', ''))
+    
+    if cohort_id is None or subject_id is None:
+        raise ValueError("Could not find cohort_id or subject_id in the input_folder path")
     
     out_folder = os.path.join(args.out_folder, "c{}s{:02d}".format(cohort_id, subject_id))
     demo_folder = os.path.join("./", "demo")
@@ -34,24 +49,17 @@ if __name__ == "__main__":
     print("Subject ID: ", subject_id)
     print("===========================================")
 
-    # check if ECG, summary, and glucose files exist
-    ecg_path = os.path.join(args.input_folder, "ECG.pkl")
-    summary_path = os.path.join(args.input_folder, "summary.pkl")
+    # check if combined and glucose files exist
+    combined_path = os.path.join(args.input_folder, "combined_e4.pkl")
     glucose_path = os.path.join(args.input_folder, "glucose.pkl")
-    if not os.path.exists(ecg_path) or not os.path.exists(summary_path) or not os.path.exists(glucose_path):
-        raise ValueError("ECG, summary, or glucose files do not exist, please run libs/preprocess.py first")
+    if not os.path.exists(combined_path) or not os.path.exists(glucose_path):
+        raise ValueError("combined, or glucose files do not exist, please run libs/preprocess.py first")
     
     # use pickle to load df (faster than csv)
-    print("Loading all ECG ~")
-    start_time = time.time()   
-    ecg_df = pd.read_pickle(ecg_path)
-    print("size of df: ", ecg_df.shape)
-    print("--- {:.3f} seconds ---".format(time.time() - start_time))
-
-    print("Loading all Summary ~")
+    print("Loading all Combined ~")
     start_time = time.time()
-    summary_df = pd.read_pickle(summary_path)
-    print("size of df: ", summary_df.shape)
+    combined_df = pd.read_pickle(combined_path)
+    print("size of df: ", combined_df.shape)
     print("--- {:.3f} seconds ---".format(time.time() - start_time))
 
     print("Loading glucose file ~")
@@ -67,29 +75,30 @@ if __name__ == "__main__":
         ans = input()
         if ans == 'y':
             print("Regenerating check file ...")
-            ecg, check = load_checkfile(ecg_df, checkfile_path, regenerate=True)
+            ppg, check = load_checkfile(combined_df, checkfile_path, regenerate=True)
         else:
-            ecg, check = load_checkfile(ecg_df, checkfile_path, regenerate=False)
+            ppg, check = load_checkfile(combined_df, checkfile_path, regenerate=False)
     else:
         print("Generating check file ...")
-        ecg, check = load_checkfile(ecg_df, checkfile_path, regenerate=True)
+        ppg, check = load_checkfile(combined_df, checkfile_path, regenerate=True)
 
     print("===========================================")
     print("Start generating beats:")
     beats_path = os.path.join(out_folder, "c{}s{:02d}_beats.pkl".format(cohort_id, subject_id))
     start_time = time.time()
-    ecg_df_final = generate_beats(ecg, check)
-    ecg_df_final.to_pickle(os.path.join(out_folder, "beats.pkl"))
+    
+    ppg_df_final = generate_beats(ppg, check)
+    ppg_df_final.to_pickle(os.path.join(out_folder, "beats.pkl"))
     print("--- {:.3f} seconds ---".format(time.time() - start_time))
-    random_row = np.random.randint(0, len(ecg_df_final))
-    plot_beat(ecg_df_final, random_row, os.path.join(demo_folder, "beat.png"))
+    random_row = np.random.randint(0, len(ppg_df_final))
+    plot_beat(ppg_df_final, random_row, os.path.join(demo_folder, "beat.png"))
 
     print("===========================================")
-    print("Combining with ecg, summary, and glucose")
-    final_df = combine_with_summary_glucose(ecg_df_final, summary_df, glucose_df)
+    print("Combining with ppg, summary, and glucose")
+    final_df = combine_with_summary_glucose(ppg_df_final, combined_df, glucose_df)
     
     print("===========================================")
-    print("Clean the rows that have r, t out of range")
+    print("Clean the rows that have r out of range")
     cleaned_final_df = clean_negative_values(final_df)
 
     print("===========================================")

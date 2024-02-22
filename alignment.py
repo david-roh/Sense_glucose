@@ -5,7 +5,7 @@ import argparse
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from libs.helper import align_ecg
+from libs.helper import align_ppg
 
 def show_aligned_demo(row_data, row_data_aligned, sampling_rate=250):
     ecg_data = np.array(row_data[:sampling_rate])
@@ -125,7 +125,7 @@ if __name__ == "__main__":
     # iterate through each row in df
     for i in tqdm.tqdm(range(len(df))):
         row_data = df.iloc[i]
-        aligned_row = align_ecg(row_data, aligned_r_peak_pos)
+        aligned_row = align_ppg(row_data, aligned_r_peak_pos)
         aligned_rows.append(aligned_row)
     df_aligned = pd.DataFrame(aligned_rows, columns=columns)
 

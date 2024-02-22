@@ -2,6 +2,7 @@ import neurokit2 as nk
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
+import pickle
 
 ppg = nk.ppg_simulate(duration=60, sampling_rate=64)
 print('ppg shape:', ppg.shape)
@@ -10,29 +11,63 @@ print('ppg first 5:', ppg[:5])
 print('-'*50)
 
 print('now processing ppg...')
-signals, info = nk.ppg_process(ppg, report="text", sampling_rate=64)
+print('cleaning ppg...')
+ppg_cleaned = nk.ppg_clean(ppg, sampling_rate=64)
+print('detecting ppg peaks...')
+signals, info = nk.ppg_peaks(ppg_cleaned, sampling_rate=64, correct_artifacts=True)
+print('done processing ppg')
 
-
-print('ppg_clean shape:', signals['PPG_Clean'].shape)
+print('head of signals:', signals.head())
 print('-'*50)
-print('ppg_clean first 5:', signals['PPG_Clean'][:5])
-print('-'*50)
-print('ppg_rate shape:', signals['PPG_Rate'].shape)
-print('-'*50)
-print('ppg_rate first 5:', signals['PPG_Rate'][:5])
-print('-'*50)
-print('ppg_peaks shape:', signals['PPG_Peaks'].shape)
-print('-'*50)
-print('ppg_peaks first 5:', signals['PPG_Peaks'][:5])
-print('-'*50)
+# print('ppg_clean shape:', signals['PPG_Clean'].shape)
+# print('-'*50)
+# print('ppg_clean first 5:', signals['PPG_Clean'][:5])
+# print('-'*50)
+# print('ppg_rate shape:', signals['PPG_Rate'].shape)
+# print('-'*50)
+# print('ppg_rate first 5:', signals['PPG_Rate'][:5])
+# print('-'*50)
+# print('ppg_peaks shape:', signals['PPG_Peaks'].shape)
+# print('-'*50)
+# print('ppg_peaks first 5:', signals['PPG_Peaks'][:5])
+# print('-'*50)
 
 #print info
 print(info)
 
-nk.ppg_plot(signals, info)
+ppg_peaks = np.unique(info['PPG_Peaks'])
+print('ppg_peaks:', ppg_peaks)
+
+# nk.ppg_plot(signals, info)
 # fig = plt.gcf()
 plt.savefig("myfig.png")
 
+
+combined_path = '/mnt/data2/david/data/c_01/s_01/combined/combined_e4.pkl'
+print('testing various things with combined_df...')
+print('loading combined_df.pkl...')
+with open(combined_path, 'rb') as f:
+    combined_df = pickle.load(f)
+
+print('number of NaN values in the bvp column:', combined_df['bvp'].isna().sum())
+
+print('first five rows with NaN values in the bvp column:', combined_df[combined_df['bvp'].isna()].head())
+
+
+# print('head of combined_df:', combined_df.head())
+# print('attempting to extract time (datetime index)')
+# arr_time = np.array(combined_df.index) 
+# print('arr_time:', arr_time)
+
+# glucose_path = '/mnt/data2/david/data/c_01/s_01/combined/glucose.pkl'
+# print('testing various things with glucose_df...')
+# print('loading glucose_df.pkl...')
+# with open(glucose_path, 'rb') as f:
+#     glucose_df = pickle.load(f)
+# print('head of glucose_df:', glucose_df.head())
+# print('attempting to extract time (datetime index)')
+# arr_time = np.array(combined_df.index) 
+# print('arr_time:', arr_time)
 
 #note, what neurokit does it that they get the hear rate and determine= the window size directly from that. Of the window size, before the r-peak is .35 of the window, and after the r-peak is .65 of the window.
 

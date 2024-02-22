@@ -87,8 +87,8 @@ After the preprocessing step is complete, we can begin processing the data by ru
 ```bash
 python main.py --input_folder <input_folder> --out_folder <out_folder>
 ```
-- **input_folder**: The folder where the combined.pkl, and glucose.pkl are saved, i.e. the out_folder path in the preprocessing step.
-    - Ex: “./SeNSE TAMU/TCH: Cohort 1 Data/S01”.
+- **input_folder**: The folder where the combined.pkl, and glucose.pkl are saved, i.e. the out_folder path in the preprocessing step. NOTE: will scan for prefix of "c_" and "s_" to find the subject and cohort folders.
+    - Ex: “./SeNSE TAMU/c_01/s_01”.
 - **out_folder**: This is the folder where all the final extracted PPG beat data is stored. It will create the cohort and subject folder automatically based on your input_folder.
     - Ex: Create a new folder, **TCH_processed**, under the "SeNSE" folder, i.e. “./SeNSE/TCH_processed”.
 
