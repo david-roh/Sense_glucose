@@ -59,6 +59,11 @@ if __name__ == "__main__":
     print("Loading all Combined ~")
     start_time = time.time()
     combined_df = pd.read_pickle(combined_path)
+    
+    # Cast 'bvp' column to float64, as we saved as float16
+    if 'bvp' in combined_df.columns:
+        combined_df['bvp'] = combined_df['bvp'].astype(np.float64)
+    
     print("size of df: ", combined_df.shape)
     print("--- {:.3f} seconds ---".format(time.time() - start_time))
 

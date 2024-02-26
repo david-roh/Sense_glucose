@@ -15,35 +15,17 @@ def show_aligned_demo(row_data, row_data_aligned, sampling_rate=250):
     plt.plot(np.arange(ecg_data.shape[0]), ecg_data, label="ECG Original", color='grey')
     plt.plot(np.arange(aligned_ecg_data.shape[0]), aligned_ecg_data, label="ECG Aligned", color='cyan')
 
-    valp = int(row_data['p'])
-    valq = int(row_data['q'])
     valr = int(row_data['r'])
-    valt = int(row_data['t'])
 
-    valp_aligned = int(row_data_aligned['p'])
-    valq_aligned = int(row_data_aligned['q'])
     valr_aligned = int(row_data_aligned['r'])
-    valt_aligned = int(row_data_aligned['t'])
 
     # Scatter plots with different markers and colors
-    if valp >= 0 and valp < len(ecg_data):
-        plt.scatter(valp, ecg_data[valp], color='green', marker='o', label="P Original")
-    if valq >= 0 and valq < len(ecg_data):
-        plt.scatter(valq, ecg_data[valq], color='blue', marker='X', label="Q Original")
     if valr >= 0 and valr < len(ecg_data):
         plt.scatter(valr, ecg_data[valr], color='red', marker='v', label="R Original")
-    if valt >= 0 and valt < len(ecg_data):
-        plt.scatter(valt, ecg_data[valt], color='purple', marker='*', label="T Original")
 
     # Similar for aligned data with different marker styles
-    if valp_aligned >= 0 and valp_aligned < len(aligned_ecg_data):
-        plt.scatter(valp_aligned, aligned_ecg_data[valp_aligned], color='green', marker='o', label="P Aligned")
-    if valq_aligned >= 0 and valq_aligned < len(aligned_ecg_data):
-        plt.scatter(valq_aligned, aligned_ecg_data[valq_aligned], color='blue', marker='X', label="Q Aligned")
     if valr_aligned >= 0 and valr_aligned < len(aligned_ecg_data):
         plt.scatter(valr_aligned, aligned_ecg_data[valr_aligned], color='red', marker='v', label="R Aligned")   
-    if valt_aligned >= 0 and valt_aligned < len(aligned_ecg_data):
-        plt.scatter(valt_aligned, aligned_ecg_data[valt_aligned], color='purple', marker='*', label="T Aligned")
 
 
     # Mark the R peak vertical line
@@ -119,7 +101,7 @@ if __name__ == "__main__":
     # create an empty dataframe to store the aligned R peaks, only keep the "glucose", "time" columns that are needed
     sampling_rate = 250
     columns = list(np.arange(sampling_rate))
-    columns.extend(['p', 'q', 'r', 't', 'Time', 'glucose', 'flag', 'hypo_label'])
+    columns.extend(['r', 'Time', 'glucose', 'flag', 'hypo_label'])
 
     aligned_rows = []
     # iterate through each row in df

@@ -24,14 +24,44 @@ def verify_folder(folder_path):
     return True
 
 def load_and_merge_data(data_folder):
-    acc_data = flirt.reader.empatica.read_acc_file_into_df(data_folder + '/ACC.csv')
-    bvp_data = flirt.reader.empatica.read_bvp_file_into_df(data_folder + '/BVP.csv')
-    eda_data = flirt.reader.empatica.read_eda_file_into_df(data_folder + '/EDA.csv')
-    hr_data = flirt.reader.empatica.read_hr_file_into_df(data_folder + '/HR.csv')
-    ib_data = flirt.reader.empatica.read_ibi_file_into_df(data_folder + '/IBI.csv')
-    temp_data = flirt.reader.empatica.read_temp_file_into_df(data_folder + '/TEMP.csv')
+    try:
+        bvp_data = flirt.reader.empatica.read_bvp_file_into_df(data_folder + '/BVP.csv')
+    except ValueError as e:
+        print(f"Error occurred in folder: {data_folder}, no BVP.csv file found.")
+        raise e
     
+    try:
+        acc_data = flirt.reader.empatica.read_acc_file_into_df(data_folder + '/ACC.csv')
+    except ValueError as e:
+        print(f"Error occurred in folder: {data_folder}. Creating an empty DataFrame for ACC data.")
+        acc_data = pd.DataFrame()
 
+    bvp_data = flirt.reader.empatica.read_bvp_file_into_df(data_folder + '/BVP.csv')  # We need this at least
+
+    try:
+        eda_data = flirt.reader.empatica.read_eda_file_into_df(data_folder + '/EDA.csv')
+    except ValueError as e:
+        print(f"Error occurred in folder: {data_folder}. Creating an empty DataFrame for EDA data.")
+        eda_data = pd.DataFrame()
+
+    try:
+        hr_data = flirt.reader.empatica.read_hr_file_into_df(data_folder + '/HR.csv')
+    except ValueError as e:
+        print(f"Error occurred in folder: {data_folder}. Creating an empty DataFrame for HR data.")
+        hr_data = pd.DataFrame()
+
+    try:
+        ib_data = flirt.reader.empatica.read_ibi_file_into_df(data_folder + '/IBI.csv')
+    except ValueError as e:
+        print(f"Error occurred in folder: {data_folder}. Creating an empty DataFrame for IBI data.")
+        ib_data = pd.DataFrame()
+
+    try:
+        temp_data = flirt.reader.empatica.read_temp_file_into_df(data_folder + '/TEMP.csv')
+    except ValueError as e:
+        print(f"Error occurred in folder: {data_folder}. Creating an empty DataFrame for TEMP data.")
+        temp_data = pd.DataFrame()
+        
     # Combine the sliced DataFrames
     data = pd.concat([bvp_data, acc_data, eda_data, hr_data, ib_data, temp_data], axis=1)
     
@@ -40,16 +70,19 @@ def load_and_merge_data(data_folder):
     # for col in ['eda', 'hr', 'temp']:
     #     data[col] = data[col].ffill()
 
-    data = data.astype({
+    dtype_dict = {
         'bvp': 'float16',
         'acc_x': 'Int8',
         'acc_y': 'Int8',
         'acc_z': 'Int8',
         'eda': 'float32',
         'hr': 'float16',
-        'ibi': 'float16',
         'temp': 'float16'
-    })
+    }
+    if 'ibi' in data.columns:
+        dtype_dict['ibi'] = 'float16'
+
+    data = data.astype(dtype_dict)
 
     # data['IBI_Presence'] = data['ibi'] > 0
 
