@@ -92,7 +92,7 @@ python main.py --input_folder <input_folder> --out_folder <out_folder>
 - **out_folder**: This is the folder where all the final extracted PPG beat data is stored. It will create the cohort and subject folder automatically based on your input_folder.
     - Ex: Create a new folder, **TCH_processed**, under the "SeNSE" folder, i.e. “./SeNSE/TCH_processed”.
 
-The processed ecg beats data (**c1s01.pkl**, **c1s01_hypo.pkl**, **c1s01_normal.pkl**) will be stored under "./SeNSE/TCH_processed/c1s01" for the example above.
+The processed ppg beats data (**c1s01.pkl**, **c1s01_hypo.pkl**, **c1s01_normal.pkl**) will be stored under "./SeNSE/TCH_processed/c1s01" for the example above.
 
 Here is an example of the beat extracted.
 <p align="center">
@@ -107,11 +107,11 @@ Run the following command for alignment:
 python alignment.py --ppg <ppg_file> --all_ppg <all_ppg_folder> --r_peak_pos <target_r_peak_pos> --out_folder <out_folder>
 ```
 - **ppg_file**: The file of the processed PPG beats (from the previous section)
-    - Ex: “./SeNSE TAMU/TCH: Cohort 1 Data/S01”.
+    - Ex: "./SeNSE/TCH_processed/c1s01/c1s01.pkl”.
 - **all_ppg_folder**: The folder storing all the processed PPG beats files
     - Ex: "./SeNSE/TCH_processed"
-- **target_r_peak_pos**: The position where the aligned R peak should be. If not provided, it will be calculated from the average among all the processed data.
-    - Ex: 59 (Mean: 59.41, Std: 14.82 from all the processed ecg data)
+- **r_peak_pos**: The position where the aligned R peak should be. If not provided, it will be calculated from the average among all the processed data.
+    - Ex: 59 (Mean: 59.41, Std: 14.82 from all the processed ppg data)
 - **out_folder**: This is the folder where all the final aligned PPG beat data is stored.
     - Ex: “./SeNSE/TCH_aligned”.
 
