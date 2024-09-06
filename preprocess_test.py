@@ -6,6 +6,14 @@ import pandas as pd
 from datetime import datetime
 import flirt.reader.empatica
 import csv
+import time
+import pickle
+import argparse
+import numpy as np
+import matplotlib.pyplot as plt
+import neurokit2 as nk
+from platformdirs import user_state_dir
+from libs.helper import load_checkfile, generate_beats, plot_beat, combine_with_summary_glucose, clean_negative_values, generate_windows, clean_positive_values, generate_fft_windows_gpu, generate_wavelet_windows
 
 def verify_folder(folder_path):
     # Check if folder exists
@@ -116,6 +124,7 @@ def process_glucose(glucose_folder):
     glucose_df = pd.read_csv(glucose_path, delimiter=dialect.delimiter)
     
     glucose_df = glucose_df[glucose_df['Event Type'] == 'EGV'].reset_index(drop = True)
+    # glucose_df['Glucose Value (mg/dL)'] = glucose_df['Glucose Value (mg/dL)'].str.replace('Low','40')
     glucose_df['Glucose Value (mg/dL)'] = glucose_df['Glucose Value (mg/dL)'].astype(str).replace('Low','40')
     glucose_df['Glucose Value (mg/dL)'] = glucose_df['Glucose Value (mg/dL)'].astype(str).replace('High','400')
 
@@ -126,18 +135,51 @@ def process_glucose(glucose_folder):
         glucose_df['Timestamp'] = pd.to_datetime(glucose_df['Timestamp'],format = '%Y-%m-%dT%H:%M:%S')
     except:
         glucose_df['Timestamp'] = pd.to_datetime(glucose_df['Timestamp'],format = '%Y-%m-%d %H:%M:%S')
-    glucose_df['glucose'] = glucose_df['glucose'].astype('float').astype('int16')  # Change here
+    glucose_df['glucose'] = glucose_df['glucose'].astype('int16')
     glucose_df = glucose_df.sort_values('Timestamp').reset_index(drop = True)
 
     return glucose_df
 
+def preprocess():
+    return
+
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Combine e4 files')
-    parser.add_argument('--folder_path', type=str, help='path to folder containing e4 files')
-    parser.add_argument('--glucose_path', type=str, help='path to glucose folder')
-    parser.add_argument('--out_folder', default=None, type=str, help='path to folder to store combined files')
+    
+    
+    parser = argparse.ArgumentParser(description='preprocess/combine/process e4 files')
+    parser.add_argument('--cohort', type=int, help='cohort number')
+    parser.add_argument('--subject', type=int, help='subject number')
     args = parser.parse_args()
 
+    data_path = f"/mnt/data2/david/data/c_0{args.cohort}/s_0{args.subject}"
+    
+    #if data_path does not exist, throw descriptive error
+    if not os.path.exists(data_path):
+        print(f"Data path {data_path} does not exist. Please check the path and try again.")
+        exit()
+    
+    #now, check for existence of e4 subfolder
+    e4_path = os.path.join(data_path, 'e4')
+    if not os.path.exists(e4_path):
+        print(f"e4 folder does not exist in {data_path}. Please check the path and try again.")
+        exit()
+    
+    #check for existence of "combined_e4.pkl" and "glucose.pkl" files in the e4_path
+    # if they don't, run preprocess()
+    # if they do, print "Files already exist. Skipping preprocessing."
+    if not os.path.exists(os.path.join(e4_path, 'combined_e4.pkl')) or not os.path.exists(os.path.join(e4_path, 'glucose.pkl')):
+        preprocess()
+    else:
+        print("Files already exist. Skipping preprocessing.")
+    
+    
+    
+    
+    
+    
+    
+    #stop progam
+    exit()
     if args.out_folder is None:
         args.out_folder = args.folder_path
 
@@ -174,3 +216,5 @@ if __name__ == '__main__':
     print("OK")
     print("===========================================")
     print("Done")
+    
+    

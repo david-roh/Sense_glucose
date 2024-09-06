@@ -1,4 +1,5 @@
 import os
+from sympy import use
 import tqdm
 import glob
 import argparse
@@ -92,16 +93,35 @@ if __name__ == "__main__":
     parser.add_argument('--out_folder', default="/mnt/data2/david/data/TCH_aligned", type=str, help='path to the output aligned R peak folder')
     args = parser.parse_args()
     
+    # print("Do you want to work with Neurokit systolic peak detection (no filtering) or Empatica's Diastolic point detection (filtered)? (n/e)")
+    # ans = input()
+    # if ans == 'n':
+    #     print("Using Neurokit systolic peak detection ...")
+    #     use_neurokit = True
+    # elif ans == 'e':
+    #     print("Using Empatica's Diastolic point detection ...")
+    #     use_neurokit = False
+    # else:
+    #     raise ValueError("Invalid choice. Please enter 'n' or 'e'.")
+    
     aligned_r_peak_pos = args.r_peak_pos
-    if aligned_r_peak_pos is None:
-        aligned_r_peak_pos = analyze_average_r_peak_position(args.all_ppg)
+    
 
     print("Reading data from {} ~".format(args.ppg))
-    print("Target R peak position: {}".format(aligned_r_peak_pos))
     df = pd.read_pickle(args.ppg)
     # I think its already sorted, but just in case
     df.sort_values('Time', inplace=True) 
+    
+    #automatically determine if we are using neurokit or not by seeing if there is an 'r' column or a 'd' column
+    use_neurokit = True if 'r' in df.columns else False
 
+    if use_neurokit:
+        if aligned_r_peak_pos is None:
+            aligned_r_peak_pos = analyze_average_r_peak_position(args.all_ppg)
+        print("Target R peak position: {}".format(aligned_r_peak_pos))
+    else:
+        aligned_r_peak_pos = 0
+        
     # remove NaN
     for column in df.columns:
         if pd.api.types.is_datetime64_any_dtype(df[column]):
@@ -121,25 +141,63 @@ if __name__ == "__main__":
         os.mkdir(out_dir)
 
     # create an empty dataframe to store the aligned R peaks, only keep the "glucose", "time" columns that are needed
-    sampling_rate = 64
+    
+    # print("Choose window generation method:")
+    # print("1. 3-second windows")
+    # print("2. By beat")
+    # choice = input("Enter your choice (1 or 2): ")
+    
+    # if choice == '1':
+    #     print("Generating 3-second windows...")
+    #     sampling_rate = 192
+        
+    # elif choice == '2':
+    #     sampling_rate = 64
+    # else:
+    #     raise ValueError("Invalid choice. Please enter 1 or 2.")
+    
+    # instead of above, automatically determine the sampling rate by checking the length of the first row, if it is over 190, then it is 192, otherwise it is 64
+    sampling_rate = 192 if len(df.columns) > 190 else 64
+    
     columns = list(np.arange(sampling_rate))
-    columns.extend(['r', 'Time', 'glucose', 'flag', 'hypo_label'])
+    if use_neurokit:
+        columns.extend(['r', 'Time', 'glucose', 'flag', 'hypo_label'])
+    else:
+        columns.extend(['d', 'Time', 'glucose', 'flag', 'hypo_label'])
 
     aligned_rows = []
+    # print("example of one of the rows in df before alignment: ", df.iloc[0])
+    print("the shape of df: ", df.shape)
+    print('type of df: ', type(df))
+    print('is df empty? ', df.empty)
+    print("the column names of df: ", df.columns.tolist())
+    
     # iterate through each row in df
-    for i in tqdm.tqdm(range(len(df))):
-        row_data = df.iloc[i]
-        aligned_row = align_ppg(row_data, aligned_r_peak_pos)
-        aligned_rows.append(aligned_row)
+    if use_neurokit:
+        for i in tqdm.tqdm(range(len(df))):
+            row_data = df.iloc[i]
+            aligned_row = align_ppg(row_data, aligned_r_peak_pos, sampling_rate=sampling_rate, use_neurokit=use_neurokit)
+            aligned_rows.append(aligned_row)
+    else:
+        aligned_rows = df[columns].values.tolist()
     df_aligned = pd.DataFrame(aligned_rows, columns=columns)
     
     # Add 'hr' column to df_aligned
-    df_aligned['hr'] = 60 / df['rr']
+    if use_neurokit:
+        df_aligned['hr'] = 60 / df['rr']
+    else:
+        df_aligned['hr'] = 60 / df['dd']
+    
+    # filter beats where the previous
+    
+    # remove zero entries from cgm
+    df_aligned = df_aligned[df_aligned['glucose'] != 0]
+    
 
     # save the aligned dataframe
     df_aligned.to_pickle(os.path.join(out_dir, "{}.pkl".format(filename)))
 
-    # pick a random row to show the alignment
-    random_row = np.random.randint(0, len(df_aligned))
-    show_aligned_demo(df.iloc[random_row], df_aligned.iloc[random_row])
-    plot_random_aligned_beats(df_aligned)
+    # # pick a random row to show the alignment
+    # random_row = np.random.randint(0, len(df_aligned))
+    # show_aligned_demo(df.iloc[random_row], df_aligned.iloc[random_row])
+    # plot_random_aligned_beats(df_aligned)
